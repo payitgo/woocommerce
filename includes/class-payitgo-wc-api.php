@@ -90,7 +90,7 @@ class Payitgo_WC_API {
 	/**
 	 * A payment, by its id.
 	 *
-	 * @param string $id The payment id (pay_…).
+	 * @param string $id The payment's id.
 	 * @return array The payment.
 	 * @throws Payitgo_WC_API_Error When payitgo refuses it or cannot be reached.
 	 */
