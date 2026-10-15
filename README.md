@@ -13,14 +13,18 @@ and the classic checkout, and with WooCommerce's order tables (HPOS).
    [latest release](https://github.com/payitgo/woocommerce/releases/latest), and upload it
    in WordPress (Plugins > Add New > Upload Plugin). Activate it.
 2. Copy a secret API key from your payitgo dashboard (Developers > API keys):
-   `sk_test_…` to try it out, `sk_live_…` for real payments.
+   a test key to try it out, a live key for real payments.
 3. In WooCommerce > Settings > Payments > payitgo (crypto), paste the key and enable it.
+   On save, the plugin asks payitgo whether the key is a test or a live key (an
+   unknown key is reported: copy it again from the dashboard).
 
 ## How it works
 
-- **Checkout:** the order becomes a payitgo payment (order id `WC-<order id>`, its items as
-  the description, the billing email, and the shop's return and cancel pages), and the
-  customer is sent to payitgo's checkout page for it.
+- **Checkout:** the order becomes a payitgo payment (order id: the WooCommerce order
+  number as it is, `1234`; its items as the description, the billing email, and the shop's
+  return and cancel pages), and the customer is sent to payitgo's checkout page for it.
+  The payment's `metadata` has `wc_order_id`, `wc_order_number` and `shop`: the plugin
+  finds the order from `wc_order_id`.
 - **Currencies:** a shop in US dollars sends `amount_usd`; any other shop sends
   `price_amount` and `price_currency`, which payitgo converts at the rate of the moment.
 - **Notifications:** each payment is created with the shop's notification address,
@@ -46,11 +50,17 @@ and the classic checkout, and with WooCommerce's order tables (HPOS).
 
 | Setting | |
 |---|---|
-| Secret API key | `sk_test_…` or `sk_live_…` |
-| Order prefix | `WC-` by default. Shops sharing one payitgo account need different prefixes |
+| Secret API key | A test key to try it out, a live key for real payments. The plugin learns which from payitgo |
 | Signing secret | Optional: the plugin reads it from payitgo. Pin one only if you must |
 | API address | `https://api.payitgo.co` |
 | Debug log | WooCommerce > Status > Logs, source `payitgo` (errors are always logged) |
+
+## Several shops on one account
+
+Order ids are unique per store at payitgo. Create a store for each shop in the payitgo
+dashboard (Stores), and give each shop the key of its own store: their order numbers
+never meet. Shops that share one key would be given each other's open payment for the
+same order number; the plugin refuses such a payment and logs why.
 
 ## Develop
 

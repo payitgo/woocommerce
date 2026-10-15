@@ -26,10 +26,10 @@ You need a payitgo account: sign up at [payitgo.co](https://payitgo.co).
 == Installation ==
 
 1. Upload the plugin (Plugins > Add New > Upload Plugin, with the zip) and activate it. WooCommerce must be active.
-2. In your payitgo dashboard, copy a secret API key (Developers > API keys): `sk_test_…` to try it out, `sk_live_…` for real payments.
+2. In your payitgo dashboard, copy a secret API key (Developers > API keys): a test key to try it out, a live key for real payments.
 3. In WooCommerce > Settings > Payments > payitgo (crypto), paste the key, and enable the payment method.
 
-That is all. To take real payments, turn live mode on in your payitgo dashboard and use your `sk_live_` key.
+That is all: the plugin asks payitgo whether the key is a test or a live key when you save the settings. To take real payments, turn live mode on in your payitgo dashboard and use your live key.
 
 == Frequently Asked Questions ==
 
@@ -51,13 +51,18 @@ That is fine: the order total is sent in your shop's currency and converted at t
 
 = Several shops share one payitgo account. =
 
-Give each shop its own Order prefix in the settings: payitgo order ids are unique per account.
+Give each shop its own store in your payitgo dashboard (Stores), and paste each shop the key of its own store. Order ids are unique per store, so the shops' order numbers never meet. Shops that share one key would be given each other's open payment for the same order number: the plugin refuses such a payment and logs why.
 
 = Can I refund from WooCommerce? =
 
 Not yet: crypto refunds are sent by hand. Refund the customer from your wallet, then mark the order refunded.
 
 == Changelog ==
+
+= 0.3.0 =
+* The payment's order id is the WooCommerce order number (`1234`), and the plugin finds the order from the payment's metadata.
+* The plugin asks payitgo whether the key is a test or a live key when the settings are saved (an unknown key is reported), and learns it from the payments it makes.
+* Several shops on one payitgo account: give each shop the key of its own store. The plugin refuses a payment another shop made, and logs why.
 
 = 0.2.0 =
 * First release: the hosted checkout from the classic and block checkout, signed notifications, prices in any currency, test mode, HPOS.

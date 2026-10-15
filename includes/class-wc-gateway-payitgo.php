@@ -23,8 +23,11 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 	/** The notifications handled for the order, so a repeated one does nothing. */
 	const META_EVENTS = '_payitgo_event_ids';
 
-	/** Where the signing secret read from payitgo is kept, per mode. */
+	/** Where the signing secret read from payitgo is kept, per key. */
 	const SECRET_CACHE = 'payitgo_wc_webhook_secret_';
+
+	/** Set while the key's mode was just asked for, so payitgo is asked at most every five minutes. */
+	const MODE_READ = 'payitgo_wc_mode_read';
 
 	/** Set up the payment method. */
 	public function __construct() {
@@ -39,7 +42,7 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 		$this->init_settings();
 		$this->title       = $this->get_option( 'title' );
 		$this->description = $this->get_option( 'description' );
-		if ( $this->api()->test_mode() && 'yes' === $this->enabled ) {
+		if ( 'yes' === $this->enabled && true === $this->test_mode() ) {
 			$this->description = trim( $this->description . ' ' . __( 'Test mode: no real coins are needed, the checkout lets you choose how the payment goes.', 'payitgo-for-woocommerce' ) );
 		}
 
@@ -74,20 +77,13 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 			'api_key'        => array(
 				'title'       => __( 'Secret API key', 'payitgo-for-woocommerce' ),
 				'type'        => 'password',
-				'description' => __( 'From your payitgo dashboard (Developers > API keys): sk_test_… to try it out, sk_live_… for real payments.', 'payitgo-for-woocommerce' ),
+				'description' => __( 'From your payitgo dashboard (Developers > API keys): a test key to try it out, a live key for real payments. Several shops on one payitgo account: give each the key of its own store.', 'payitgo-for-woocommerce' ),
 				'default'     => '',
-			),
-			'order_prefix'   => array(
-				'title'       => __( 'Order prefix', 'payitgo-for-woocommerce' ),
-				'type'        => 'text',
-				'description' => __( 'Put before the order number at payitgo. Shops that share one payitgo account need different prefixes.', 'payitgo-for-woocommerce' ),
-				'default'     => 'WC-',
-				'desc_tip'    => true,
 			),
 			'webhook_secret' => array(
 				'title'       => __( 'Signing secret (optional)', 'payitgo-for-woocommerce' ),
 				'type'        => 'password',
-				'description' => __( 'Leave empty: the plugin reads it from payitgo with your key. Set it (whsec_…) only to pin one.', 'payitgo-for-woocommerce' ),
+				'description' => __( 'Leave empty: the plugin reads it from payitgo with your key. Set it only to pin one.', 'payitgo-for-woocommerce' ),
 				'default'     => '',
 			),
 			'base_url'       => array(
@@ -110,10 +106,16 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 	/** The settings page, with what the shop needs to know first. */
 	public function admin_options() {
 		$notes = array();
+		if ( '' !== trim( $this->get_option( 'api_key' ) ) && null === $this->test_mode() ) {
+			$this->learn_mode( false ); // not known yet: ask payitgo now
+		}
+		$test = $this->test_mode();
 		if ( '' === trim( $this->get_option( 'api_key' ) ) ) {
 			$notes[] = array( 'error', __( 'Add your secret API key to start accepting payments.', 'payitgo-for-woocommerce' ) );
-		} elseif ( $this->api()->test_mode() ) {
-			$notes[] = array( 'warning', __( 'Test mode: payments are simulated. Use an sk_live_ key to take real payments.', 'payitgo-for-woocommerce' ) );
+		} elseif ( true === $test ) {
+			$notes[] = array( 'warning', __( 'Test mode: this is a test key, payments are simulated. Use a live key to take real payments.', 'payitgo-for-woocommerce' ) );
+		} elseif ( null === $test ) {
+			$notes[] = array( 'warning', __( 'payitgo could not be reached to check the key yet: save the settings again in a moment.', 'payitgo-for-woocommerce' ) );
 		}
 		if ( 0 === strpos( $this->notification_url(), 'https://' ) ) {
 			/* translators: %s: the shop's notification address. */
@@ -128,16 +130,92 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 		parent::admin_options();
 	}
 
-	/** Saves the settings; the signing secret is read again with the new key. */
+	/**
+	 * Saves the settings, then asks payitgo about the key: its mode, and its
+	 * mode's signing secret.
+	 */
 	public function process_admin_options() {
 		$saved = parent::process_admin_options();
-		delete_transient( self::SECRET_CACHE . 'test' );
-		delete_transient( self::SECRET_CACHE . 'live' );
-		$key = trim( $this->get_option( 'api_key' ) );
-		if ( '' !== $key && 0 !== strpos( $key, 'sk_test_' ) && 0 !== strpos( $key, 'sk_live_' ) ) {
-			WC_Admin_Settings::add_error( __( 'The secret API key starts with sk_test_ or sk_live_: copy it again from your payitgo dashboard.', 'payitgo-for-woocommerce' ) );
+		if ( '' !== trim( $this->get_option( 'api_key' ) ) ) {
+			delete_transient( self::MODE_READ );
+			$this->learn_mode( true );
 		}
 		return $saved;
+	}
+
+	/**
+	 * Whether the key is a test key (its payments are simulated). The key's
+	 * text does not say: payitgo does, asked when the settings are saved or
+	 * shown, or told by a payment or the signing secret the key read, and the
+	 * answer is kept with the key. Never asked here: a shop's pages do not
+	 * wait for payitgo.
+	 *
+	 * @return bool|null Null while payitgo has not been asked about this key.
+	 */
+	public function test_mode() {
+		if ( '' === trim( $this->get_option( 'api_key' ) ) || $this->get_option( 'key_hash' ) !== $this->key_hash() ) {
+			return null;
+		}
+		return 'test' === $this->get_option( 'key_mode' );
+	}
+
+	/**
+	 * Asks payitgo which mode the key is in (GET /v1/webhook), at most every
+	 * five minutes, and keeps the answer and the mode's signing secret.
+	 *
+	 * @param bool $report Show what went wrong on the settings page.
+	 */
+	private function learn_mode( $report ) {
+		if ( false !== get_transient( self::MODE_READ ) ) {
+			return;
+		}
+		set_transient( self::MODE_READ, 1, 5 * MINUTE_IN_SECONDS );
+		try {
+			$webhook = $this->api()->get_webhook();
+		} catch ( Payitgo_WC_API_Error $e ) {
+			$this->log( 'error', 'the key could not be checked: ' . $e->getMessage() );
+			if ( $report ) {
+				$message = 401 === $e->status
+					? __( 'payitgo does not know this secret API key: copy it again from your payitgo dashboard.', 'payitgo-for-woocommerce' )
+					/* translators: %s: why payitgo could not be asked. */
+					: sprintf( __( 'payitgo could not check the key (%s): save the settings again in a moment.', 'payitgo-for-woocommerce' ), $e->getMessage() );
+				WC_Admin_Settings::add_error( $message );
+			}
+			return;
+		}
+		$this->remember_mode( ! empty( $webhook['livemode'] ) );
+		$secret = (string) ( $webhook['secret'] ?? '' );
+		if ( '' !== $secret ) {
+			set_transient( $this->secret_cache(), $secret, DAY_IN_SECONDS );
+		}
+	}
+
+	/**
+	 * Keeps the key's mode, with a hash of the key it is the mode of.
+	 *
+	 * @param bool $live Whether the key is a live key.
+	 */
+	private function remember_mode( $live ) {
+		$this->update_option( 'key_hash', $this->key_hash() );
+		$this->update_option( 'key_mode', $live ? 'live' : 'test' );
+	}
+
+	/**
+	 * A hash of the settings' key: what its mode and signing secret are kept under.
+	 *
+	 * @return string
+	 */
+	private function key_hash() {
+		return hash( 'sha256', trim( $this->get_option( 'api_key' ) ) );
+	}
+
+	/**
+	 * Where the key's signing secret is kept.
+	 *
+	 * @return string
+	 */
+	private function secret_cache() {
+		return self::SECRET_CACHE . substr( $this->key_hash(), 0, 16 );
 	}
 
 	/**
@@ -165,7 +243,7 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 		}
 		$body = array_merge(
 			array(
-				'order_id'    => Payitgo_WC_Helpers::order_ref( $this->prefix(), $order->get_id() ),
+				'order_id'    => (string) $order->get_order_number(),
 				'description' => $this->describe( $order ),
 				'success_url' => $this->get_return_url( $order ),
 				'cancel_url'  => $order->get_cancel_order_url_raw(),
@@ -193,6 +271,14 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 		if ( empty( $payment['id'] ) || empty( $payment['checkout_url'] ) ) {
 			$this->log( 'error', sprintf( 'order %d: payitgo answered without a checkout page: %s', $order->get_id(), wp_json_encode( $payment ) ) );
 			throw new Exception( __( 'The crypto payment could not be started. Please try again, or choose another way to pay.', 'payitgo-for-woocommerce' ) );
+		}
+		if ( ! Payitgo_WC_Helpers::made_by( $payment, home_url() ) || Payitgo_WC_Helpers::order_of( $payment ) !== $order->get_id() ) {
+			// Another shop's open payment for the same order number: the shops share a key.
+			$this->log( 'error', sprintf( 'order %d: payitgo answered with payment %s of another shop (%s): give each shop the key of its own store', $order->get_id(), $payment['id'], $payment['metadata']['shop'] ?? '?' ) );
+			throw new Exception( __( 'The crypto payment could not be started. Please choose another way to pay.', 'payitgo-for-woocommerce' ) );
+		}
+		if ( isset( $payment['livemode'] ) && $this->get_option( 'key_hash' ) !== $this->key_hash() ) {
+			$this->remember_mode( (bool) $payment['livemode'] ); // the payment says which mode the key is in
 		}
 		$this->remember( $order, $payment );
 		$this->log( 'info', sprintf( 'order %d: payment %s, %s', $order->get_id(), $payment['id'], $payment['checkout_url'] ) );
@@ -273,15 +359,16 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 	 * @param string $type     The notification's type ("" when read directly).
 	 */
 	private function apply( array $payment, $event_id = '', $type = '' ) {
-		$order = wc_get_order( Payitgo_WC_Helpers::order_id( $this->prefix(), $payment['order_id'] ?? '' ) );
+		$order = wc_get_order( Payitgo_WC_Helpers::order_of( $payment ) );
 		if ( ! $order || $order->get_payment_method() !== $this->id ) {
-			return; // Another shop's order on the same account, or not paid with payitgo.
+			return; // Not one of this shop's orders paid with payitgo.
 		}
 		$id = (string) ( $payment['id'] ?? '' );
 		if ( '' === $id || ! in_array( $id, $this->meta_list( $order, self::META_PAYMENTS ), true ) ) {
 			return;
 		}
-		if ( isset( $payment['livemode'] ) && (bool) $payment['livemode'] === $this->api()->test_mode() ) {
+		$test = $this->test_mode();
+		if ( isset( $payment['livemode'] ) && null !== $test && (bool) $payment['livemode'] === $test ) {
 			return; // The other mode's: never fulfil a real order from a test payment.
 		}
 		if ( '' !== $event_id ) {
@@ -385,7 +472,7 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 	 * @return string
 	 */
 	private function signing_secret( $fresh ) {
-		$cache  = self::SECRET_CACHE . ( $this->api()->test_mode() ? 'test' : 'live' );
+		$cache  = $this->secret_cache();
 		$secret = get_transient( $cache );
 		if ( false !== $secret && ( ! $fresh || false !== get_transient( $cache . '_read' ) ) ) {
 			return (string) $secret;
@@ -398,6 +485,7 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 			$this->log( 'error', 'the signing secret could not be read: ' . $e->getMessage() );
 			return false === $secret ? '' : (string) $secret;
 		}
+		$this->remember_mode( ! empty( $webhook['livemode'] ) );
 		if ( '' !== $secret ) {
 			set_transient( $cache, $secret, DAY_IN_SECONDS );
 		}
@@ -471,15 +559,6 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 		}
 		/* translators: %s: order number. */
 		return Payitgo_WC_Helpers::describe( $lines, sprintf( __( 'Order %s', 'payitgo-for-woocommerce' ), $order->get_order_number() ) );
-	}
-
-	/**
-	 * The order prefix.
-	 *
-	 * @return string
-	 */
-	private function prefix() {
-		return (string) $this->get_option( 'order_prefix', 'WC-' );
 	}
 
 	/**
