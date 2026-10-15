@@ -44,7 +44,7 @@ function refused( callable $fn ) {
 }
 
 // ── Signatures ────────────────────────────────────────────────────────────────
-$secret = 'whsec_test';
+$secret = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 $body   = '{"id":"evt_1","type":"payment.confirmed","livemode":false,"data":{"id":"pay_1","order_id":"WC-42","status":"confirmed"}}';
 $t      = 1791619398;
 $sig    = 't=' . $t . ',v1=' . hash_hmac( 'sha256', $t . '.' . $body, $secret );
@@ -52,7 +52,7 @@ $sig    = 't=' . $t . ',v1=' . hash_hmac( 'sha256', $t . '.' . $body, $secret );
 $event = Payitgo_WC_Helpers::verify( $body, $sig, $secret, $t + 10 );
 check( 'payment.confirmed' === $event['type'] && 'pay_1' === $event['data']['id'], 'a signed notification is verified' );
 check( 'evt_1' === Payitgo_WC_Helpers::verify( $body, ' ' . str_replace( ',', ' , ', $sig ), $secret, $t )['id'], 'spaces around the parts are allowed' );
-check( refused( fn() => Payitgo_WC_Helpers::verify( $body, $sig, 'whsec_other', $t ) ), 'another secret is refused' );
+check( refused( fn() => Payitgo_WC_Helpers::verify( $body, $sig, '5a1c3e7f9b2d4f6a8c0e2b4d6f8a1c3e5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f5a', $t ) ), 'another secret is refused' );
 check( refused( fn() => Payitgo_WC_Helpers::verify( str_replace( 'WC-42', 'WC-43', $body ), $sig, $secret, $t ) ), 'a changed body is refused' );
 check( refused( fn() => Payitgo_WC_Helpers::verify( $body, $sig, $secret, $t + 301 ) ), 'an old signature is refused' );
 check( 'evt_1' === Payitgo_WC_Helpers::verify( $body, $sig, $secret, $t + 9999, 0 )['id'], 'tolerance 0 takes any age' );
@@ -63,12 +63,13 @@ $junk = 'not json';
 check( refused( fn() => Payitgo_WC_Helpers::verify( $junk, 't=' . $t . ',v1=' . hash_hmac( 'sha256', $t . '.' . $junk, $secret ), $secret, $t ) ), 'a signed body that is no event is refused' );
 
 // ── Orders at payitgo ────────────────────────────────────────────────────────
-check( 'WC-42' === Payitgo_WC_Helpers::order_ref( 'WC-', 42 ), 'an order is named with the prefix' );
-check( 42 === Payitgo_WC_Helpers::order_id( 'WC-', 'WC-42' ), 'the order id is read back' );
-check( 0 === Payitgo_WC_Helpers::order_id( 'WC-', 'SHOP2-42' ), "another shop's order is not ours" );
-check( 0 === Payitgo_WC_Helpers::order_id( 'WC-', 'WC-42a' ), 'an order id that is not a number is not ours' );
-check( 0 === Payitgo_WC_Helpers::order_id( 'WC-', 'WC-' ), 'a prefix alone is not an order' );
-check( 7 === Payitgo_WC_Helpers::order_id( '', '7' ), 'no prefix works too' );
+$ours = array( 'metadata' => array( 'wc_order_id' => '42', 'shop' => 'https://shop.example/' ) );
+check( 42 === Payitgo_WC_Helpers::order_of( $ours ), "the order is read from the payment's metadata" );
+check( 0 === Payitgo_WC_Helpers::order_of( array( 'order_id' => '42' ) ), 'a payment without metadata is no order of ours' );
+check( 0 === Payitgo_WC_Helpers::order_of( array( 'metadata' => array( 'wc_order_id' => '42a' ) ) ), 'an order id that is not a number is not ours' );
+check( Payitgo_WC_Helpers::made_by( $ours, 'https://shop.example' ), 'a payment made by this shop' );
+check( ! Payitgo_WC_Helpers::made_by( $ours, 'https://other.example' ), "another shop's payment" );
+check( ! Payitgo_WC_Helpers::made_by( array(), 'https://shop.example' ), 'a payment that names no shop' );
 
 // ── Descriptions ─────────────────────────────────────────────────────────────
 check( '2 x Acme T-shirt, Mug' === Payitgo_WC_Helpers::describe( array( array( 'Acme <b>T-shirt</b>', 2 ), array( 'Mug', 1 ) ), 'Order 1' ), 'items are listed with their quantities' );

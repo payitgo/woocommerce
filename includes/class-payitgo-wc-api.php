@@ -42,7 +42,7 @@ class Payitgo_WC_API {
 	const DEFAULT_BASE_URL = 'https://api.payitgo.co';
 
 	/**
-	 * The secret key: sk_live_… or sk_test_….
+	 * The secret key, test or live: payitgo says which (get_webhook()).
 	 *
 	 * @var string
 	 */
@@ -64,15 +64,6 @@ class Payitgo_WC_API {
 	public function __construct( $key, $base_url = '' ) {
 		$this->key      = trim( (string) $key );
 		$this->base_url = rtrim( '' !== trim( (string) $base_url ) ? trim( $base_url ) : self::DEFAULT_BASE_URL, '/' );
-	}
-
-	/**
-	 * Whether the key is a test key: its payments are simulated.
-	 *
-	 * @return bool
-	 */
-	public function test_mode() {
-		return 0 === strpos( $this->key, 'sk_test_' );
 	}
 
 	/**
@@ -99,7 +90,8 @@ class Payitgo_WC_API {
 	}
 
 	/**
-	 * The key's mode's webhook: its URL and signing secret.
+	 * The key's mode's webhook: its URL, its signing secret, and livemode,
+	 * the key's mode.
 	 *
 	 * @return array
 	 * @throws Payitgo_WC_API_Error When payitgo refuses it or cannot be reached.

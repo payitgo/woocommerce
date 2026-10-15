@@ -39,7 +39,7 @@ final class Payitgo_WC_Helpers {
 	 *
 	 * @param string   $payload   The raw request body.
 	 * @param string   $header    The X-Webhook-Signature header.
-	 * @param string   $secret    The signing secret (whsec_…).
+	 * @param string   $secret    The signing secret.
 	 * @param int|null $now       The time to check against (tests).
 	 * @param int      $tolerance How old the signature may be, in seconds (0: any).
 	 * @return array The event: id, type, livemode, created_at, data.
@@ -75,33 +75,29 @@ final class Payitgo_WC_Helpers {
 	}
 
 	/**
-	 * The order id payitgo knows an order by: the shop's prefix and its id.
-	 * payitgo's order ids are unique per account, so shops sharing a key use
-	 * different prefixes.
+	 * The WooCommerce order a payment was made for: the wc_order_id in its
+	 * metadata, or 0 when it has none (not a payment of this plugin's).
 	 *
-	 * @param string     $prefix The shop's prefix ("WC-").
-	 * @param int|string $id     The WooCommerce order id.
-	 * @return string
+	 * @param array $payment The payment.
+	 * @return int
 	 */
-	public static function order_ref( $prefix, $id ) {
-		return $prefix . $id;
+	public static function order_of( array $payment ) {
+		$id = isset( $payment['metadata']['wc_order_id'] ) ? (string) $payment['metadata']['wc_order_id'] : '';
+		return ctype_digit( $id ) ? (int) $id : 0;
 	}
 
 	/**
-	 * The WooCommerce order id in a payment's order_id, or 0 when it is not
-	 * one of this shop's.
+	 * Whether a payment was made by the shop at $shop (its metadata's shop).
+	 * Shops that share one payitgo key could be given each other's open
+	 * payment for the same order number: each shop needs its store's key.
 	 *
-	 * @param string $prefix The shop's prefix.
-	 * @param string $ref    The payment's order_id.
-	 * @return int
+	 * @param array  $payment The payment.
+	 * @param string $shop    The shop's address (home_url()).
+	 * @return bool
 	 */
-	public static function order_id( $prefix, $ref ) {
-		$ref = (string) $ref;
-		if ( '' !== $prefix && 0 !== strpos( $ref, $prefix ) ) {
-			return 0;
-		}
-		$id = substr( $ref, strlen( $prefix ) );
-		return ctype_digit( $id ) ? (int) $id : 0;
+	public static function made_by( array $payment, $shop ) {
+		$made = isset( $payment['metadata']['shop'] ) ? (string) $payment['metadata']['shop'] : '';
+		return rtrim( $made, '/' ) === rtrim( (string) $shop, '/' );
 	}
 
 	/**
