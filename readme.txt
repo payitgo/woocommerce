@@ -4,7 +4,7 @@ Tags: crypto, cryptocurrency, usdt, bitcoin, payments
 Requires at least: 6.3
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.0
+Stable tag: 0.6.0
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -58,6 +58,9 @@ Give each shop its own store in your payitgo dashboard (Stores), and paste each 
 Not yet: crypto refunds are sent by hand. Refund the customer from your wallet, then mark the order refunded.
 
 == Changelog ==
+
+= 0.6.0 =
+* No change to the plugin since 0.3.0: its version follows the payitgo libraries'.
 
 = 0.3.0 =
 * The payment's order id is the WooCommerce order number (`1234`), and the plugin finds the order from the payment's metadata.
