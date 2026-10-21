@@ -59,6 +59,9 @@ Not yet: crypto refunds are sent by hand. Refund the customer from your wallet, 
 
 == Changelog ==
 
+= 0.6.1 =
+* No change to the plugin since 0.3.0: its version follows the payitgo libraries'.
+
 = 0.6.0 =
 * No change to the plugin since 0.3.0: its version follows the payitgo libraries'.
 
