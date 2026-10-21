@@ -4,7 +4,7 @@ Tags: crypto, cryptocurrency, usdt, bitcoin, payments
 Requires at least: 6.3
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.6.0
+Stable tag: 0.6.1
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
