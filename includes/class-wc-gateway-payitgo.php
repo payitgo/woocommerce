@@ -262,7 +262,18 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 			$body['webhook_url'] = $this->notification_url();
 		}
 		try {
-			$payment = $this->api()->create_payment( $body );
+			try {
+				$payment = $this->api()->create_payment( $body );
+			} catch ( Payitgo_WC_API_Error $e ) {
+				if ( 400 !== $e->status || ! isset( $body['webhook_url'] ) || 0 !== strpos( $e->getMessage(), 'webhook_url:' ) ) {
+					throw $e;
+				}
+				// payitgo refuses to notify this address (not public, e.g. an intranet shop): the order is
+				// checked when the customer comes back from the checkout instead.
+				$this->log( 'warning', sprintf( 'order %d: payitgo cannot notify %s (%s): the order is checked when the customer comes back', $order->get_id(), $body['webhook_url'], $e->getMessage() ) );
+				unset( $body['webhook_url'] );
+				$payment = $this->api()->create_payment( $body );
+			}
 		} catch ( Payitgo_WC_API_Error $e ) {
 			$this->log( 'error', sprintf( 'order %d: the payment could not be created: %s', $order->get_id(), $e->getMessage() ) );
 			/* translators: %s: payitgo's reason. */

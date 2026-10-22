@@ -12,8 +12,10 @@ and the classic checkout, and with WooCommerce's order tables (HPOS).
 1. Download `payitgo-for-woocommerce-X.Y.Z.zip` from the
    [latest release](https://github.com/payitgo/woocommerce/releases/latest), and upload it
    in WordPress (Plugins > Add New > Upload Plugin). Activate it.
-2. Copy a secret API key from your payitgo dashboard (Developers > API keys):
-   a test key to try it out, a live key for real payments.
+2. Copy a secret API key from your payitgo dashboard (Developers > API keys), one with full
+   access (a read-only key cannot create payments): a test key to try it out, a live key for
+   real payments (it works once you have confirmed your email and turned live mode on in the
+   dashboard).
 3. In WooCommerce > Settings > Payments > payitgo (crypto), paste the key and enable it.
    On save, the plugin asks payitgo whether the key is a test or a live key (an
    unknown key is reported: copy it again from the dashboard).
@@ -28,7 +30,7 @@ and the classic checkout, and with WooCommerce's order tables (HPOS).
 - **Currencies:** a shop in US dollars sends `amount_usd`; any other shop sends
   `price_amount` and `price_currency`, which payitgo converts at the rate of the moment.
 - **Notifications:** each payment is created with the shop's notification address,
-  `https://<shop>/wc-api/payitgo/` (or `?wc-api=payitgo`), when the shop is on https. The
+  `https://yourdomain.com/wc-api/payitgo/` (or `?wc-api=payitgo`), when the shop is on https. The
   plugin verifies the signature with the signing secret of the key's mode, read from
   payitgo with the key (or pinned in the settings), and ignores notifications it has
   seen, of another mode, or for payments that are not the order's.
@@ -36,7 +38,7 @@ and the classic checkout, and with WooCommerce's order tables (HPOS).
 
   | Payment | Order |
   |---|---|
-  | `confirmed` | Paid (`processing`, or `completed` for virtual goods), with the transaction id. On hold instead if the payment was for another amount than the order's total |
+  | `confirmed` | Paid (`processing`, or `completed` for virtual, downloadable products), with the transaction id. On hold instead if the payment was for another amount than the order's total |
   | `detecting` | On hold: the money arrived, confirmations pending |
   | `partially_paid` | A note: the customer can still send the rest |
   | `underpaid` | On hold, with what arrived: refund or settle the rest |
@@ -44,7 +46,8 @@ and the classic checkout, and with WooCommerce's order tables (HPOS).
 
   A deposit in another coin, or one after the payment closed, adds a note.
 - **On the way back:** the order-received page reads the payment, so a shop that
-  notifications cannot reach (not on https) still learns the outcome.
+  notifications cannot reach (not on https, or at an address that is not public, such as
+  `https://shop.local`) still learns the outcome.
 
 ## Settings
 
@@ -52,7 +55,7 @@ and the classic checkout, and with WooCommerce's order tables (HPOS).
 |---|---|
 | Secret API key | A test key to try it out, a live key for real payments. The plugin learns which from payitgo |
 | Signing secret | Optional: the plugin reads it from payitgo. Pin one only if you must |
-| API address | `https://api.payitgo.co` |
+| API address | payitgo's API, `https://api.payitgo.co` by default. Leave it as it is |
 | Debug log | WooCommerce > Status > Logs, source `payitgo` (errors are always logged) |
 
 ## Several shops on one account

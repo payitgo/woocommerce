@@ -14,7 +14,7 @@ Accept USDT, USDC, BTC, ETH and other coins in your WooCommerce shop. Customers 
 
 payitgo is a crypto payment gateway. With this plugin your customers choose "Crypto" at checkout, pay on payitgo's secure hosted page, and come back to your shop. The order is marked paid as soon as the payment is final on chain.
 
-* **Every coin payitgo offers:** USDT on Tron, BNB Smart Chain and Ethereum; USDC on BNB Smart Chain and Ethereum; BTC, ETH, BNB, LTC, DOGE, TRX and XRP. You choose which ones in your payitgo dashboard.
+* **Every coin payitgo offers:** USDT on Tron, BNB Smart Chain and Ethereum; USDC on BNB Smart Chain and Ethereum; DAI, SHIB and PEPE on Ethereum; ETH on Ethereum and BNB Smart Chain; BTC, BNB, LTC, DOGE, TRX and XRP. You choose which ones in your payitgo dashboard.
 * **Any shop currency:** prices in EUR, GBP, NGN or any other currency are converted to dollars at the rate of the moment; the customer pays the equivalent in crypto.
 * **Orders update by themselves:** paid when the payment is final, on hold while it confirms or when it falls short, failed when it expires (the customer can pay again from their account).
 * **Nothing to set up for notifications:** each payment tells your shop how it went, signed and verified. A shop not on https checks the payment when the customer comes back.
@@ -26,10 +26,10 @@ You need a payitgo account: sign up at [payitgo.co](https://payitgo.co).
 == Installation ==
 
 1. Upload the plugin (Plugins > Add New > Upload Plugin, with the zip) and activate it. WooCommerce must be active.
-2. In your payitgo dashboard, copy a secret API key (Developers > API keys): a test key to try it out, a live key for real payments.
+2. In your payitgo dashboard, copy a secret API key with full access (Developers > API keys; a read-only key cannot create payments): a test key to try it out, a live key for real payments.
 3. In WooCommerce > Settings > Payments > payitgo (crypto), paste the key, and enable the payment method.
 
-That is all: the plugin asks payitgo whether the key is a test or a live key when you save the settings. To take real payments, turn live mode on in your payitgo dashboard and use your live key.
+That is all: the plugin asks payitgo whether the key is a test or a live key when you save the settings. To take real payments, confirm your email, turn live mode on in your payitgo dashboard and use your live key.
 
 == Frequently Asked Questions ==
 
@@ -58,6 +58,9 @@ Give each shop its own store in your payitgo dashboard (Stores), and paste each 
 Not yet: crypto refunds are sent by hand. Refund the customer from your wallet, then mark the order refunded.
 
 == Changelog ==
+
+= 0.6.2 =
+* A shop on https at an address payitgo cannot notify (an intranet or local shop) can take payments: the plugin creates the payment without its notification address and checks the order when the customer comes back.
 
 = 0.6.1 =
 * No change to the plugin since 0.3.0: its version follows the payitgo libraries'.
