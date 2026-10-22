@@ -3,7 +3,7 @@
  * Plugin Name:          payitgo for WooCommerce
  * Plugin URI:           https://github.com/payitgo/woocommerce
  * Description:          Accept crypto payments (USDT, USDC, BTC, ETH and more) with payitgo: customers pay on payitgo's hosted checkout, and orders update by themselves.
- * Version:              0.6.1
+ * Version:              0.6.2
  * Author:               payitgo
  * Author URI:           https://payitgo.co
  * License:              MIT
@@ -19,7 +19,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'PAYITGO_WC_VERSION', '0.6.1' );
+define( 'PAYITGO_WC_VERSION', '0.6.2' );
 define( 'PAYITGO_WC_FILE', __FILE__ );
 define( 'PAYITGO_WC_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PAYITGO_WC_URL', plugin_dir_url( __FILE__ ) );
