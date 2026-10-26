@@ -133,29 +133,24 @@ final class Payitgo_WC_Helpers {
 	}
 
 	/**
-	 * The payment's price fields for an order total in the shop's currency:
-	 * amount_usd for a dollar shop, else price_amount and price_currency
-	 * (payitgo converts them at the rate of the moment).
+	 * The payment's price for an order total in the shop's currency: its
+	 * amount and currency (USD, EUR, GBP, NGN or any other). payitgo converts
+	 * it at the rate of the moment, and every figure on the payment is in it.
 	 *
 	 * @param string $total    The order total, as WooCommerce has it.
 	 * @param string $currency The order's currency code.
 	 * @return array
 	 */
 	public static function price( $total, $currency ) {
-		$amount = self::decimal( $total );
-		if ( 'USD' === strtoupper( $currency ) ) {
-			return array( 'amount_usd' => $amount );
-		}
 		return array(
-			'price_amount'   => $amount,
-			'price_currency' => strtoupper( $currency ),
+			'amount'   => self::decimal( $total ),
+			'currency' => strtoupper( $currency ),
 		);
 	}
 
 	/**
 	 * Whether a payment is for the order's total, in the order's currency:
-	 * its price_amount and price_currency, or its usd_amount for a dollar
-	 * order, to the cent.
+	 * its amount and currency, to the thousandth.
 	 *
 	 * @param array  $payment  The payment, as payitgo sends it.
 	 * @param string $total    The order total.
@@ -163,12 +158,32 @@ final class Payitgo_WC_Helpers {
 	 * @return bool
 	 */
 	public static function amounts_match( array $payment, $total, $currency ) {
-		$currency = strtoupper( $currency );
-		if ( ! empty( $payment['price_currency'] ) ) {
-			return strtoupper( $payment['price_currency'] ) === $currency
-				&& self::thousandths( $payment['price_amount'] ?? '' ) === self::thousandths( $total );
+		return strtoupper( (string) ( $payment['currency'] ?? '' ) ) === strtoupper( $currency )
+			&& self::thousandths( $payment['amount'] ?? '' ) === self::thousandths( $total );
+	}
+
+	/**
+	 * An amount in a currency as people read it: "$20.00" for dollars,
+	 * "18.40 EUR" for any other currency, "0.01234 ETH" for a payment priced
+	 * in a coin (the amount keeps its places, two at least).
+	 *
+	 * @param mixed  $amount   The amount, as payitgo sends it.
+	 * @param string $currency The currency code.
+	 * @return string
+	 */
+	public static function money( $amount, $currency ) {
+		$amount = self::decimal( $amount );
+		$dot    = strpos( $amount, '.' );
+		if ( false === $dot ) {
+			$amount .= '.00';
+		} elseif ( strlen( $amount ) - $dot < 3 ) {
+			$amount .= '0';
 		}
-		return 'USD' === $currency && self::thousandths( $payment['usd_amount'] ?? '' ) === self::thousandths( $total );
+		$currency = strtoupper( trim( (string) $currency ) );
+		if ( '' === $currency ) {
+			return $amount;
+		}
+		return 'USD' === $currency ? '$' . $amount : $amount . ' ' . $currency;
 	}
 
 	/**

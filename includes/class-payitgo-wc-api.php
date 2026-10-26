@@ -70,7 +70,7 @@ class Payitgo_WC_API {
 	 * Creates a payment, or returns the open one of the same order id (a
 	 * retry never makes a second payment).
 	 *
-	 * @param array $body The payment's fields (order_id, amount_usd or price_amount and price_currency, …).
+	 * @param array $body The payment's fields (order_id, amount, currency, …).
 	 * @return array The payment.
 	 * @throws Payitgo_WC_API_Error When payitgo refuses it or cannot be reached.
 	 */
