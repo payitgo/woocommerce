@@ -391,7 +391,7 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 			$order->update_meta_data( self::META_EVENTS, array_slice( $seen, -30 ) );
 		}
 		$token    = (string) ( $payment['token'] ?? '' );
-		$received = (string) ( $payment['received_amount'] ?? '0' );
+		$received = (string) ( $payment['crypto_received'] ?? '0' );
 		$status   = (string) ( $payment['status'] ?? '' );
 		switch ( Payitgo_WC_Helpers::action_for( $status ) ) {
 			case Payitgo_WC_Helpers::COMPLETE:
@@ -402,7 +402,7 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 					$order->update_status(
 						'on-hold',
 						/* translators: 1: payment id, 2: its price, 3: the order total. */
-						sprintf( __( 'payitgo payment %1$s is final, but it was for %2$s while the order is now %3$s: check it before shipping.', 'payitgo-for-woocommerce' ), $id, $this->price_of( $payment ), $order->get_total() . ' ' . $order->get_currency() )
+						sprintf( __( 'payitgo payment %1$s is final, but it was for %2$s while the order is now %3$s: check it before shipping.', 'payitgo-for-woocommerce' ), $id, $this->price_of( $payment ), Payitgo_WC_Helpers::money( $order->get_total(), $order->get_currency() ) )
 					);
 					break;
 				}
@@ -415,8 +415,9 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 					break;
 				}
 				if ( 'underpaid' === $status ) {
-					/* translators: 1: payment id, 2: dollars received, 3: dollars due. */
-					$note = sprintf( __( 'payitgo payment %1$s closed short: $%2$s of $%3$s arrived (it is settled to you). Refund the customer or agree on the rest with them.', 'payitgo-for-woocommerce' ), $id, $payment['received_usd'] ?? '0', $payment['amount_due_usd'] ?? '' );
+					$currency = (string) ( $payment['currency'] ?? '' );
+					/* translators: 1: payment id, 2: what arrived, 3: what was due, both in the payment's currency. */
+					$note = sprintf( __( 'payitgo payment %1$s closed short: %2$s of %3$s arrived (it is settled to you). Refund the customer or agree on the rest with them.', 'payitgo-for-woocommerce' ), $id, Payitgo_WC_Helpers::money( $payment['amount_received'] ?? '0', $currency ), Payitgo_WC_Helpers::money( $payment['amount_due'] ?? '', $currency ) );
 				} else {
 					/* translators: 1: payment id, 2: amount, 3: coin. */
 					$note = sprintf( __( 'payitgo payment %1$s: %2$s %3$s arrived, waiting for network confirmations.', 'payitgo-for-woocommerce' ), $id, $received, $token );
@@ -544,17 +545,14 @@ class WC_Gateway_Payitgo extends WC_Payment_Gateway {
 	}
 
 	/**
-	 * A payment's price as people read it: "18.40 EUR ($20.61)" or "$20.61".
+	 * A payment's price as people read it, in its currency: "$20.61" or
+	 * "18.40 EUR".
 	 *
 	 * @param array $payment The payment.
 	 * @return string
 	 */
 	private function price_of( array $payment ) {
-		$usd = '$' . ( $payment['usd_amount'] ?? '' );
-		if ( ! empty( $payment['price_currency'] ) && 'USD' !== $payment['price_currency'] ) {
-			return ( $payment['price_amount'] ?? '' ) . ' ' . $payment['price_currency'] . ' (' . $usd . ')';
-		}
-		return $usd;
+		return Payitgo_WC_Helpers::money( $payment['amount'] ?? '', $payment['currency'] ?? '' );
 	}
 
 	/**

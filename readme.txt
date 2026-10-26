@@ -15,7 +15,7 @@ Accept USDT, USDC, BTC, ETH and other coins in your WooCommerce shop. Customers 
 payitgo is a crypto payment gateway. With this plugin your customers choose "Crypto" at checkout, pay on payitgo's secure hosted page, and come back to your shop. The order is marked paid as soon as the payment is final on chain.
 
 * **Every coin payitgo offers:** USDT on Tron, BNB Smart Chain and Ethereum; USDC on BNB Smart Chain and Ethereum; DAI, SHIB and PEPE on Ethereum; ETH on Ethereum and BNB Smart Chain; BTC, BNB, LTC, DOGE, TRX and XRP. You choose which ones in your payitgo dashboard.
-* **Any shop currency:** prices in EUR, GBP, NGN or any other currency are converted to dollars at the rate of the moment; the customer pays the equivalent in crypto.
+* **Any shop currency:** prices in EUR, GBP, NGN or any other currency are taken as they are. The customer pays their equivalent in crypto at the rate of the moment, and the order's notes stay in your currency.
 * **Orders update by themselves:** paid when the payment is final, on hold while it confirms or when it falls short, failed when it expires (the customer can pay again from their account).
 * **Nothing to set up for notifications:** each payment tells your shop how it went, signed and verified. A shop not on https checks the payment when the customer comes back.
 * **Test mode:** with a test key no coins are needed; the checkout lets you choose how the payment goes (paid, underpaid, expired…).
@@ -47,7 +47,7 @@ The order fails, and the customer can pay it again from their account: a new pay
 
 = My shop is not in US dollars. =
 
-That is fine: the order total is sent in your shop's currency and converted at the rate of the moment. The order note shows both amounts.
+That is fine. The order total is sent in your shop's currency, the customer pays its equivalent in crypto at the rate of the moment, and the order's notes show the amounts in your currency.
 
 = Several shops share one payitgo account. =
 

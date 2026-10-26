@@ -79,28 +79,46 @@ check( strlen( $long ) <= Payitgo_WC_Helpers::MAX_DESCRIPTION, 'a long descripti
 check( 1 === preg_match( '//u', $long ) && '…' === substr( $long, -strlen( '…' ) ), 'it is cut on a character, with an ellipsis' );
 
 // ── Prices ───────────────────────────────────────────────────────────────────
-check( array( 'amount_usd' => '19.99' ) === Payitgo_WC_Helpers::price( '19.99', 'usd' ), 'a dollar shop sends amount_usd' );
 check(
 	array(
-		'price_amount'   => '18.40',
-		'price_currency' => 'EUR',
-	) === Payitgo_WC_Helpers::price( '18.40', 'eur' ),
-	'another currency is sent as price_amount and price_currency'
+		'amount'   => '19.99',
+		'currency' => 'USD',
+	) === Payitgo_WC_Helpers::price( '19.99', 'usd' ),
+	'a dollar shop sends its total as amount and currency'
 );
-check( '1.250' === Payitgo_WC_Helpers::price( '1.250', 'KWD' )['price_amount'], 'three decimals are kept' );
-check( '10' === Payitgo_WC_Helpers::price( 10.0, 'USD' )['amount_usd'], 'a float total is sent as its decimal' );
-check( '19.90' === Payitgo_WC_Helpers::price( ' 19.90 ', 'USD' )['amount_usd'], 'spaces around a total are trimmed' );
+check(
+	array(
+		'amount'   => '18.40',
+		'currency' => 'EUR',
+	) === Payitgo_WC_Helpers::price( '18.40', 'eur' ),
+	'any other currency is sent the same way, as its code'
+);
+check( '1.250' === Payitgo_WC_Helpers::price( '1.250', 'KWD' )['amount'], 'three decimals are kept' );
+check( '10' === Payitgo_WC_Helpers::price( 10.0, 'USD' )['amount'], 'a float total is sent as its decimal' );
+check( '19.90' === Payitgo_WC_Helpers::price( ' 19.90 ', 'USD' )['amount'], 'spaces around a total are trimmed' );
 
 $eur = array(
-	'usd_amount'     => '20.61',
-	'price_amount'   => '18.4',
-	'price_currency' => 'EUR',
+	'amount'     => '18.4',
+	'currency'   => 'EUR',
+	'amount_due' => '18.95',
+);
+$usd = array(
+	'amount'   => '20',
+	'currency' => 'USD',
 );
 check( Payitgo_WC_Helpers::amounts_match( $eur, '18.40', 'EUR' ), 'a payment in the order currency matches its total' );
 check( ! Payitgo_WC_Helpers::amounts_match( $eur, '18.41', 'EUR' ), 'another total does not match' );
 check( ! Payitgo_WC_Helpers::amounts_match( $eur, '18.40', 'GBP' ), 'another currency does not match' );
-check( Payitgo_WC_Helpers::amounts_match( array( 'usd_amount' => '20' ), '20.00', 'USD' ), 'a dollar payment matches a dollar order' );
-check( ! Payitgo_WC_Helpers::amounts_match( array( 'usd_amount' => '20' ), '20.00', 'EUR' ), 'a dollar payment does not pay a euro order' );
+check( Payitgo_WC_Helpers::amounts_match( $usd, '20.00', 'USD' ), 'a dollar payment matches a dollar order' );
+check( ! Payitgo_WC_Helpers::amounts_match( $usd, '20.00', 'EUR' ), 'a dollar payment does not pay a euro order' );
+check( ! Payitgo_WC_Helpers::amounts_match( array( 'amount' => '20' ), '20.00', 'USD' ), 'a payment without a currency matches no order' );
+
+check( '$20.00' === Payitgo_WC_Helpers::money( '20', 'USD' ), 'dollars read as $20.00' );
+check( '$20.61' === Payitgo_WC_Helpers::money( '20.61', 'usd' ), 'the currency code may be in any case' );
+check( '18.40 EUR' === Payitgo_WC_Helpers::money( '18.4', 'EUR' ), 'another currency reads as 18.40 EUR' );
+check( '1.250 KWD' === Payitgo_WC_Helpers::money( '1.250', 'KWD' ), 'three places are kept' );
+check( '0.01234 ETH' === Payitgo_WC_Helpers::money( '0.01234', 'ETH' ), "a price in a coin keeps the coin's places" );
+check( '20.00' === Payitgo_WC_Helpers::money( 20, '' ), 'no currency: the amount alone' );
 
 // ── Statuses ─────────────────────────────────────────────────────────────────
 foreach ( array(

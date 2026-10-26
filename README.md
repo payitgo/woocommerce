@@ -27,8 +27,10 @@ and the classic checkout, and with WooCommerce's order tables (HPOS).
   return and cancel pages), and the customer is sent to payitgo's checkout page for it.
   The payment's `metadata` has `wc_order_id`, `wc_order_number` and `shop`: the plugin
   finds the order from `wc_order_id`.
-- **Currencies:** a shop in US dollars sends `amount_usd`; any other shop sends
-  `price_amount` and `price_currency`, which payitgo converts at the rate of the moment.
+- **Currencies:** the order total is sent as the payment's `amount` in the shop's
+  `currency` (USD, EUR, GBP, NGN or any other). payitgo converts it at the rate of the
+  moment, and every figure on the payment (`amount_due`, `amount_received`) is in that
+  currency, so the order's notes read in the shop's own.
 - **Notifications:** each payment is created with the shop's notification address,
   `https://yourdomain.com/wc-api/payitgo/` (or `?wc-api=payitgo`), when the shop is on https. The
   plugin verifies the signature with the signing secret of the key's mode, read from
